@@ -34,14 +34,14 @@ func repoContext(worktree string) string {
 
 	if output, err := exec.Command("git", "-C", worktree, "ls-files").Output(); err == nil {
 		files := strings.Split(strings.TrimSpace(string(output)), "\n")
-		sb.WriteString("Files:\n")
+		fmt.Fprintf(&sb, "Files:\n")
 		for i, file := range files {
 			if file == "" || i >= 120 {
 				break
 			}
-			sb.WriteString("- ")
-			sb.WriteString(file)
-			sb.WriteString("\n")
+			fmt.Fprintf(&sb, "- ")
+			fmt.Fprintf(&sb, "%s", file)
+			fmt.Fprintf(&sb, "\n")
 		}
 
 		keyFiles := selectKeyFiles(files)
@@ -50,15 +50,15 @@ func repoContext(worktree string) string {
 			if err != nil || len(content) > 20000 {
 				continue
 			}
-			sb.WriteString("\n--- ")
-			sb.WriteString(file)
-			sb.WriteString(" ---\n")
+			fmt.Fprintf(&sb, "\n--- ")
+			fmt.Fprintf(&sb, "%s", file)
+			fmt.Fprintf(&sb, " ---\n")
 			text := string(content)
 			if len(text) > 4000 {
 				text = text[:4000]
 			}
-			sb.WriteString(text)
-			sb.WriteString("\n")
+			fmt.Fprintf(&sb, "%s", text)
+			fmt.Fprintf(&sb, "\n")
 		}
 	}
 
