@@ -68,8 +68,19 @@ func (a *App) RunGitHubDiscoveryNow(limit int) error {
 }
 
 func (a *App) RescoreNow(limit int) error {
-	if a.GitHubCrawl == nil || a.GitHub == nil || a.AI == nil {
-		return fmt.Errorf("GitHub atau AI belum diinisialisasi")
+	if a.GitHub == nil {
+		a.initGitHub()
+	}
+	if a.AI == nil {
+		if err := a.initAI(); err != nil {
+			return fmt.Errorf("gagal inisialisasi AI: %w", err)
+		}
+	}
+	if a.GitHub == nil {
+		return fmt.Errorf("GitHub belum dikonfigurasi (github.token kosong?)")
+	}
+	if a.AI == nil {
+		return fmt.Errorf("AI belum dikonfigurasi")
 	}
 	if limit <= 0 {
 		limit = 20
