@@ -1,0 +1,34 @@
+services:
+  ohman:
+    build: .
+    container_name: ohman-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      OHMAN_DATABASE_URL: postgres://ohman:ohman_secret@postgres:5432/ohman?sslmode=disable
+      TZ: Asia/Jakarta
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ohman-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ohman
+      POSTGRES_PASSWORD: ohman_secret
+      POSTGRES_DB: ohman
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ohman"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
