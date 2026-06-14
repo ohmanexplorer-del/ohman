@@ -6,6 +6,7 @@ import (
 	storage "ohman/src/core/db"
 	"ohman/src/core/prompts"
 	"strings"
+	"time"
 )
 
 func (c *Crawler) exploreUser(username string) error {
@@ -87,14 +88,66 @@ func (c *Crawler) exploreUser(username string) error {
 	return nil
 }
 
+type repoQualitySignals struct {
+	HasCI           bool
+	HasTests        bool
+	HasContributing bool
+	Archived        bool
+}
+
+func (c *Crawler) detectQualitySignals(owner, repoName string) repoQualitySignals {
+	contents, err := c.client.GetRepoContents(c.ctx, owner, repoName, "")
+	if err != nil {
+		return repoQualitySignals{}
+	}
+	var s repoQualitySignals
+	for _, item := range contents {
+		p := strings.ToLower(item.Path)
+		switch p {
+		case ".github", ".circleci", ".travis.yml", ".gitlab-ci.yml", "jenkinsfile", ".drone.yml", "azure-pipelines.yml":
+			s.HasCI = true
+		case "test", "tests", "spec", "__tests__", "testing", "e2e":
+			s.HasTests = true
+		case "contributing.md", "changelog.md", "code_of_conduct.md":
+			s.HasContributing = true
+		}
+	}
+	return s
+}
+
 func (c *Crawler) evaluateRepo(repo *RepoData) {
+	owner, repoName, _ := strings.Cut(repo.FullName, "/")
+
+	readmePreview := ""
+	if readme, err := c.client.GetReadme(c.ctx, owner, repoName); err == nil {
+		readmePreview = trimToLength(readme, 1500)
+	}
+
+	signals := c.detectQualitySignals(owner, repoName)
+
+	repoAgeDays := 0
+	if !repo.CreatedAt.IsZero() {
+		repoAgeDays = int(time.Since(repo.CreatedAt).Hours() / 24)
+	}
+
 	prompt, err := prompts.RenderGitHubEvaluateRepo(prompts.GitHubEvaluateRepoPromptData{
-		FullName:    repo.FullName,
-		Owner:       repo.Owner,
-		Description: repo.Description,
-		Language:    repo.Language,
-		Stars:       repo.Stars,
-		Topics:      repo.Topics,
+		FullName:        repo.FullName,
+		Owner:           repo.Owner,
+		Description:     repo.Description,
+		Language:        repo.Language,
+		Stars:           repo.Stars,
+		Forks:           repo.Forks,
+		OpenIssues:      repo.OpenIssues,
+		SizeKB:          repo.SizeKB,
+		Topics:          repo.Topics,
+		License:         repo.License,
+		RepoAgeDays:     repoAgeDays,
+		HasHomepage:     repo.Homepage != "",
+		Archived:        false,
+		ReadmePreview:   readmePreview,
+		HasCI:           signals.HasCI,
+		HasTests:        signals.HasTests,
+		HasContributing: signals.HasContributing,
 	})
 	if err != nil {
 		log.Printf("failed to render GitHub repo evaluation prompt: %v", err)

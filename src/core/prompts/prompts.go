@@ -36,12 +36,23 @@ type GitHubDiscoverReposPromptData struct {
 }
 
 type GitHubEvaluateRepoPromptData struct {
-	FullName    string
-	Owner       string
-	Description string
-	Language    string
-	Stars       int
-	Topics      []string
+	FullName        string
+	Owner           string
+	Description     string
+	Language        string
+	Stars           int
+	Forks           int
+	OpenIssues      int
+	SizeKB          int
+	Topics          []string
+	License         string
+	RepoAgeDays     int
+	HasHomepage     bool
+	Archived        bool
+	ReadmePreview   string
+	HasCI           bool
+	HasTests        bool
+	HasContributing bool
 }
 
 type GitHubSummarizeReadmePromptData struct {

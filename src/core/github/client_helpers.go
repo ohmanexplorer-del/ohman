@@ -77,6 +77,8 @@ func repoToData(r *gh.Repository) *RepoData {
 		Description:   textutil.NormalizeText(r.GetDescription()),
 		Stars:         r.GetStargazersCount(),
 		Forks:         r.GetForksCount(),
+		OpenIssues:    r.GetOpenIssuesCount(),
+		SizeKB:        r.GetSize(),
 		Language:      r.GetLanguage(),
 		Topics:        r.Topics,
 		License:       license,

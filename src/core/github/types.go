@@ -9,6 +9,8 @@ type RepoData struct {
 	Description   string    `json:"description"`
 	Stars         int       `json:"stars"`
 	Forks         int       `json:"forks"`
+	OpenIssues    int       `json:"open_issues"`
+	SizeKB        int       `json:"size_kb"`
 	Language      string    `json:"language"`
 	Topics        []string  `json:"topics"`
 	License       string    `json:"license"`
