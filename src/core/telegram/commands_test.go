@@ -68,6 +68,13 @@ func (c *fakeController) PublishLibraryNow() error {
 	return nil
 }
 
+func (c *fakeController) RescoreNow(limit int) error {
+	if c.err != nil {
+		return c.err
+	}
+	return nil
+}
+
 func (c *fakeController) SetConfigValue(key, value string) error {
 	if c.err != nil {
 		return c.err

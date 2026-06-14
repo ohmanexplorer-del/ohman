@@ -22,6 +22,7 @@ type BotController interface {
 	SetActivityReports(enabled bool) error
 	RunDiscoveryNow(limit int) error
 	PublishLibraryNow() error
+	RescoreNow(limit int) error
 	SetConfigValue(key, value string) error
 	GetConfigValue(key string) (string, bool, error)
 	ListConfigValues(prefix string, limit int) ([]ConfigEntry, error)

@@ -58,6 +58,10 @@ func (c telegramController) PublishLibraryNow() error {
 	return c.app.PublishLibraryNow()
 }
 
+func (c telegramController) RescoreNow(limit int) error {
+	return c.app.RescoreNow(limit)
+}
+
 func (c telegramController) SetConfigValue(key, value string) error {
 	return c.app.SetConfigValue(key, value)
 }

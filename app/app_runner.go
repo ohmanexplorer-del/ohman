@@ -6,6 +6,9 @@ import (
 	"log"
 	"strings"
 	"time"
+
+	storage "ohman/src/core/db"
+	ght "ohman/src/core/github"
 )
 
 func (a *App) runContributionOnce() error {
@@ -62,6 +65,49 @@ func (a *App) RunGitHubDiscoveryNow(limit int) error {
 	}
 	a.lastGitHubDiscoveryAt = nil
 	return a.runGitHubDiscoveryOnce(limit)
+}
+
+func (a *App) RescoreNow(limit int) error {
+	if a.GitHubCrawl == nil || a.GitHub == nil || a.AI == nil {
+		return fmt.Errorf("GitHub atau AI belum diinisialisasi")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	go func() {
+		a.notifyActivity(fmt.Sprintf("Rescore dimulai: akan mengevaluasi ulang %d repo dengan prompt terbaru.", limit))
+		repos, err := a.DB.GetReposForRescore(limit)
+		if err != nil {
+			a.notifyActivity("Rescore gagal memuat repo: " + err.Error())
+			return
+		}
+
+		ctx := context.Background()
+		rescored, rejected, skipped := 0, 0, 0
+		for i, dbRepo := range repos {
+			if _, safe, _ := a.GitHub.CheckRateLimit(ctx); !safe {
+				a.notifyActivity(fmt.Sprintf("Rescore berhenti di repo ke-%d karena rate limit GitHub.", i+1))
+				break
+			}
+
+			ghRepo := dbRepoToGitHub(dbRepo)
+			ght.EvaluateRepo(ctx, a.GitHub, a.AI, ghRepo)
+
+			updated := githubRepoToStorage(ghRepo, dbRepo)
+			if err := a.DB.UpsertRepo(updated); err != nil {
+				log.Printf("Rescore: gagal simpan %s: %v", dbRepo.FullName, err)
+				skipped++
+				continue
+			}
+			if ghRepo.Publish {
+				rescored++
+			} else {
+				rejected++
+			}
+		}
+		a.notifyActivity(fmt.Sprintf("Rescore selesai: %d publish=true | %d publish=false | %d error.", rescored, rejected, skipped))
+	}()
+	return nil
 }
 
 func (a *App) PublishLibraryNow() error {
@@ -167,4 +213,66 @@ func (a *App) runGitHubDiscoveryOnce(limit int) error {
 		stats["repos"], stats["users"], stats["sessions"])
 	a.notifyActivity(fmt.Sprintf("Stats DB: repos=%d users=%d sessions=%d.", stats["repos"], stats["users"], stats["sessions"]))
 	return nil
+}
+
+func dbRepoToGitHub(r *storage.RepoData) *ght.RepoData {
+	return &ght.RepoData{
+		GithubID:      r.GithubID,
+		FullName:      r.FullName,
+		Owner:         r.Owner,
+		Description:   r.Description,
+		Stars:         r.Stars,
+		Forks:         r.Forks,
+		Language:      r.Language,
+		Topics:        r.Topics,
+		License:       r.License,
+		DefaultBranch: r.DefaultBranch,
+		Homepage:      r.Homepage,
+		CreatedAt:     r.CreatedAt,
+		UpdatedAt:     r.UpdatedAt,
+		PushedAt:      r.PushedAt,
+		VisitedAt:     r.VisitedAt,
+		AIScore:       r.AIScore,
+		AINotes:       r.AINotes,
+		ReadmeSummary: r.ReadmeSummary,
+		Category:      r.Category,
+		ProjectType:   r.ProjectType,
+		Novelty:       r.Novelty,
+		Maturity:      r.Maturity,
+		SmallRepoFit:  r.SmallRepoFit,
+		Strengths:     r.Strengths,
+		Weaknesses:    r.Weaknesses,
+		Publish:       r.Publish,
+	}
+}
+
+func githubRepoToStorage(g *ght.RepoData, orig *storage.RepoData) *storage.RepoData {
+	return &storage.RepoData{
+		GithubID:      g.GithubID,
+		FullName:      g.FullName,
+		Owner:         g.Owner,
+		Description:   g.Description,
+		Stars:         g.Stars,
+		Forks:         g.Forks,
+		Language:      g.Language,
+		Topics:        g.Topics,
+		License:       g.License,
+		DefaultBranch: g.DefaultBranch,
+		Homepage:      g.Homepage,
+		CreatedAt:     g.CreatedAt,
+		UpdatedAt:     g.UpdatedAt,
+		PushedAt:      g.PushedAt,
+		VisitedAt:     orig.VisitedAt,
+		AIScore:       g.AIScore,
+		AINotes:       g.AINotes,
+		ReadmeSummary: orig.ReadmeSummary,
+		Category:      g.Category,
+		ProjectType:   g.ProjectType,
+		Novelty:       g.Novelty,
+		Maturity:      g.Maturity,
+		SmallRepoFit:  g.SmallRepoFit,
+		Strengths:     g.Strengths,
+		Weaknesses:    g.Weaknesses,
+		Publish:       g.Publish,
+	}
 }
