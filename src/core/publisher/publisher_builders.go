@@ -14,44 +14,44 @@ import (
 
 func (p *Publisher) buildFindingsReadme(repos []*ght.RepoData) string {
 	var sb strings.Builder
-	sb.WriteString("# Ohman Explorer\n\n")
-	sb.WriteString("Autonomous GitHub project discovery and comparison index.\n\n")
-	sb.WriteString(fmt.Sprintf("Last updated: %s\n\n", time.Now().UTC().Format("2006-01-02 15:04:05 UTC")))
-	sb.WriteString(fmt.Sprintf("Total indexed projects: %d\n\n", len(repos)))
-	sb.WriteString("## Disclaimer\n\n")
-	sb.WriteString("This library is AI-assisted curation, not a final endorsement. Scores are signals for discovery and comparison. Repo age, activity, maintenance history, and direct inspection should be considered before adoption, especially for young projects.\n\n")
-	sb.WriteString("## Categories\n\n")
+	fmt.Fprintf(&sb, "# Ohman Explorer\n\n")
+	fmt.Fprintf(&sb, "Autonomous GitHub project discovery and comparison index.\n\n")
+	fmt.Fprintf(&sb, "Last updated: %s\n\n", time.Now().UTC().Format("2006-01-02 15:04:05 UTC"))
+	fmt.Fprintf(&sb, "Total indexed projects: %d\n\n", len(repos))
+	fmt.Fprintf(&sb, "## Disclaimer\n\n")
+	fmt.Fprintf(&sb, "This library is AI-assisted curation, not a final endorsement. Scores are signals for discovery and comparison. Repo age, activity, maintenance history, and direct inspection should be considered before adoption, especially for young projects.\n\n")
+	fmt.Fprintf(&sb, "## Categories\n\n")
 
 	groups := groupByCategory(repos)
-	sb.WriteString("| Category | Projects |\n")
-	sb.WriteString("|---|---:|\n")
+	fmt.Fprintf(&sb, "| Category | Projects |\n")
+	fmt.Fprintf(&sb, "|---|---:|\n")
 	for _, category := range sortedCategories(groups) {
-		sb.WriteString(fmt.Sprintf("| [%s](categories/%s.md) | %d |\n", category, category, len(groups[category])))
+		fmt.Fprintf(&sb, "| [%s](categories/%s.md) | %d |\n", category, category, len(groups[category]))
 	}
 
 	languages := groupByLanguage(repos)
 	if len(languages) > 0 {
-		sb.WriteString("\n## Languages\n\n")
-		sb.WriteString("| Language | Projects |\n")
-		sb.WriteString("|---|---:|\n")
+		fmt.Fprintf(&sb, "\n## Languages\n\n")
+		fmt.Fprintf(&sb, "| Language | Projects |\n")
+		fmt.Fprintf(&sb, "|---|---:|\n")
 		for _, language := range sortedLanguages(languages) {
-			sb.WriteString(fmt.Sprintf("| %s | %d |\n", language, languages[language]))
+			fmt.Fprintf(&sb, "| %s | %d |\n", language, languages[language])
 		}
 	}
 
-	sb.WriteString("\n## Data\n\n")
-	sb.WriteString("- [Machine-readable repo data](data/repos.json)\n")
-	sb.WriteString(fmt.Sprintf("- [Current library snapshot](findings/%s.md)\n\n", time.Now().Format("2006-01-02")))
-	sb.WriteString("Repository details live inside the category pages.\n\n")
-	sb.WriteString("Managed by Ohman Explorer.\n")
+	fmt.Fprintf(&sb, "\n## Data\n\n")
+	fmt.Fprintf(&sb, "- [Machine-readable repo data](data/repos.json)\n")
+	fmt.Fprintf(&sb, "- [Current library snapshot](findings/%s.md)\n\n", time.Now().Format("2006-01-02"))
+	fmt.Fprintf(&sb, "Repository details live inside the category pages.\n\n")
+	fmt.Fprintf(&sb, "Managed by Ohman Explorer.\n")
 	return sb.String()
 }
 
 func (p *Publisher) buildFindingsArchive(repos []*ght.RepoData) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# Library Snapshot %s\n\n", time.Now().Format("2006-01-02")))
-	sb.WriteString(fmt.Sprintf("Total indexed projects: %d\n\n", len(repos)))
-	sb.WriteString("AI scores are discovery signals. Repo age and recent activity should be checked before adoption.\n\n")
+	fmt.Fprintf(&sb, "# Library Snapshot %s\n\n", time.Now().Format("2006-01-02"))
+	fmt.Fprintf(&sb, "Total indexed projects: %d\n\n", len(repos))
+	fmt.Fprintf(&sb, "AI scores are discovery signals. Repo age and recent activity should be checked before adoption.\n\n")
 	for i, repo := range repos {
 		writeRepoCard(&sb, i+1, repo)
 	}
@@ -60,9 +60,9 @@ func (p *Publisher) buildFindingsArchive(repos []*ght.RepoData) string {
 
 func (p *Publisher) buildCategoryPage(category string, repos []*ght.RepoData) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# %s\n\n", category))
-	sb.WriteString("Curated projects in this category.\n\n")
-	sb.WriteString("Note: young repositories can show strong potential but still carry higher stability and maintenance risk.\n\n")
+	fmt.Fprintf(&sb, "# %s\n\n", category)
+	fmt.Fprintf(&sb, "Curated projects in this category.\n\n")
+	fmt.Fprintf(&sb, "Note: young repositories can show strong potential but still carry higher stability and maintenance risk.\n\n")
 	for i, repo := range repos {
 		writeRepoCard(&sb, i+1, repo)
 	}
