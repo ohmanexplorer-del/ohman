@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"log"
 	storage "ohman/src/core/db"
@@ -95,8 +96,8 @@ type repoQualitySignals struct {
 	Archived        bool
 }
 
-func (c *Crawler) detectQualitySignals(owner, repoName string) repoQualitySignals {
-	contents, err := c.client.GetRepoContents(c.ctx, owner, repoName, "")
+func detectQualitySignals(ctx context.Context, client *Client, owner, repoName string) repoQualitySignals {
+	contents, err := client.GetRepoContents(ctx, owner, repoName, "")
 	if err != nil {
 		return repoQualitySignals{}
 	}
@@ -115,15 +116,17 @@ func (c *Crawler) detectQualitySignals(owner, repoName string) repoQualitySignal
 	return s
 }
 
-func (c *Crawler) evaluateRepo(repo *RepoData) {
+// EvaluateRepo menjalankan evaluasi AI untuk satu repo, mengambil README dan sinyal kualitas dari GitHub.
+// Hasilnya ditulis langsung ke field-field repo yang diberikan.
+func EvaluateRepo(ctx context.Context, client *Client, ai AIService, repo *RepoData) {
 	owner, repoName, _ := strings.Cut(repo.FullName, "/")
 
 	readmePreview := ""
-	if readme, err := c.client.GetReadme(c.ctx, owner, repoName); err == nil {
+	if readme, err := client.GetReadme(ctx, owner, repoName); err == nil {
 		readmePreview = trimToLength(readme, 1500)
 	}
 
-	signals := c.detectQualitySignals(owner, repoName)
+	signals := detectQualitySignals(ctx, client, owner, repoName)
 
 	repoAgeDays := 0
 	if !repo.CreatedAt.IsZero() {
@@ -155,7 +158,7 @@ func (c *Crawler) evaluateRepo(repo *RepoData) {
 		return
 	}
 
-	response, err := c.ai.GenerateContent(c.ctx, prompt)
+	response, err := ai.GenerateContent(ctx, prompt)
 	if err != nil {
 		log.Printf("AI evaluation failed for %s: %v", repo.FullName, err)
 		applyFallbackEvaluation(repo)
@@ -181,6 +184,11 @@ func (c *Crawler) evaluateRepo(repo *RepoData) {
 	repo.Weaknesses = trimStringSlice(evaluation.Weaknesses, 5)
 	repo.Publish = evaluation.Publish
 }
+
+func (c *Crawler) evaluateRepo(repo *RepoData) {
+	EvaluateRepo(c.ctx, c.client, c.ai, repo)
+}
+
 
 func (c *Crawler) shouldExploreUser(user *UserData) bool {
 	prompt, err := prompts.RenderGitHubExploreUser(prompts.GitHubExploreUserPromptData{

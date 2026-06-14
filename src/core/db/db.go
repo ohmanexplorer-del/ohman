@@ -446,26 +446,33 @@ func (db *DB) GetVisitedRepos(limit int) ([]*RepoData, error) {
 	if err := db.conn.Order("stars DESC").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("failed to query repos: %w", err)
 	}
+	return repoRowsToData(rows), nil
+}
 
+func (db *DB) GetReposForRescore(limit int) ([]*RepoData, error) {
+	var rows []repoRow
+	q := db.conn.Order("visited_at DESC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if err := q.Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("failed to query repos for rescore: %w", err)
+	}
+	return repoRowsToData(rows), nil
+}
+
+func repoRowsToData(rows []repoRow) []*RepoData {
 	repos := make([]*RepoData, 0, len(rows))
 	for _, r := range rows {
-		var topics []string
-		var strengths []string
-		var weaknesses []string
+		var topics, strengths, weaknesses []string
 		if r.Topics != "" {
-			if err := json.Unmarshal([]byte(r.Topics), &topics); err != nil {
-				topics = nil
-			}
+			_ = json.Unmarshal([]byte(r.Topics), &topics)
 		}
 		if r.Strengths != "" {
-			if err := json.Unmarshal([]byte(r.Strengths), &strengths); err != nil {
-				strengths = nil
-			}
+			_ = json.Unmarshal([]byte(r.Strengths), &strengths)
 		}
 		if r.Weaknesses != "" {
-			if err := json.Unmarshal([]byte(r.Weaknesses), &weaknesses); err != nil {
-				weaknesses = nil
-			}
+			_ = json.Unmarshal([]byte(r.Weaknesses), &weaknesses)
 		}
 		repos = append(repos, &RepoData{
 			GithubID:      r.GithubID,
@@ -496,7 +503,7 @@ func (db *DB) GetVisitedRepos(limit int) ([]*RepoData, error) {
 			PushedAt:      r.PushedAt,
 		})
 	}
-	return repos, nil
+	return repos
 }
 
 func (db *DB) Stats() (map[string]int, error) {
