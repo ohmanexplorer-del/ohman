@@ -49,6 +49,19 @@ func (s *Service) executeCommand(text string) string {
 			return "publish failed: " + err.Error()
 		}
 		return "library publish requested"
+	case "/rescore":
+		limit := 20
+		if len(args) > 0 {
+			value, err := strconv.Atoi(args[0])
+			if err != nil || value <= 0 {
+				return "usage: /rescore [limit] (default: 20)"
+			}
+			limit = value
+		}
+		if err := s.controller.RescoreNow(limit); err != nil {
+			return "rescore failed: " + err.Error()
+		}
+		return fmt.Sprintf("rescore dimulai untuk %d repo (berjalan di background)", limit)
 	case "/set_limit":
 		if len(args) != 1 {
 			return "usage: /set_limit <number>"
@@ -204,6 +217,7 @@ func commandHelp() string {
 		"/status - show bot status",
 		"/run_once [limit] - run discovery now",
 		"/publish - republish library",
+		"/rescore [limit] - re-evaluasi repo lama dengan prompt terbaru (default: 20)",
 		"/set_limit <number> - set repos per run",
 		"/set_interval <cron> - set schedule",
 		"/queries - show GitHub search queries",
